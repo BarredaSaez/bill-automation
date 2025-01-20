@@ -7,19 +7,31 @@ import threading
 def run_bill_script():
     """Ejecuta el script bill.py y muestra la salida en el campo de texto."""
     try:
-        # Ejecutar el script y capturar la salida
+        # Obtener el texto ingresado por el usuario
+        input_text = entry.get()
+        
+        # Verificar si se ha ingresado un texto en el campo
+        if input_text.strip() == "":
+            output_text.insert(tk.END, "\nError: Debes ingresar un texto para -s.\n")
+            output_text.see(tk.END)
+            return
+        
+        # Ejecutar el script bill.py con el argumento -s
         process = subprocess.Popen(
-            ["python3", "bill.py"],  # Cambia "python3" a "python" si es necesario
+            ["python3", "bill.py", "-s", input_text],  # Pasar el argumento ingresado
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
         )
+        
         # Leer la salida en tiempo real
         for line in process.stdout:
             output_text.insert(tk.END, line)
             output_text.see(tk.END)
+        
         process.stdout.close()
         return_code = process.wait()
+        
         if return_code != 0:
             error_output = process.stderr.read()
             output_text.insert(tk.END, f"\nError:\n{error_output}")
@@ -30,7 +42,7 @@ def run_bill_script():
 
 def on_run():
     """Acción del botón Run."""
-    output_text.insert(tk.END, "\nEjecutando bill.py...\n")
+    output_text.insert(tk.END, "\nExecuting bill.py, it may take some time...\n")
     output_text.see(tk.END)
     # Ejecutar en un hilo separado para no bloquear la interfaz
     threading.Thread(target=run_bill_script).start()
@@ -45,6 +57,13 @@ root.resizable(False, False)  # Evitar redimensionar la ventana
 style = ttk.Style()
 style.configure("TButton", font=("Arial", 12, "bold"), foreground="white", background="#4CAF50")
 style.map("TButton", background=[("active", "#45A049")])
+
+# Crear el campo de entrada de texto
+entry_label = ttk.Label(root, text="Introduce the subject you want to look for:", font=("Arial", 10))
+entry_label.pack(pady=5)
+
+entry = ttk.Entry(root, font=("Arial", 12))
+entry.pack(pady=5)
 
 # Crear el botón Run
 run_button = ttk.Button(root, text="Run", command=on_run)
