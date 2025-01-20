@@ -1,0 +1,10 @@
+.env
+myenv
+__pycache__
+*.pyc
+*.pyo
+.vscode
+.idea
+credentials.json
+client_secrets.json
+token.pickle
