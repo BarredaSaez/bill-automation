@@ -15,6 +15,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import pickle
+import argparse
 
 load_dotenv()
 
@@ -184,7 +185,8 @@ def process_file(file_path):
     else:
         print("Could not extract text from the file.")
 
-def process_emails():
+def process_emails(subject):
+    subject = str(subject)
     email_address = os.getenv("GMAIL_EMAIL")
     password = os.getenv("GMAIL_APP_PASSWORD")
 
@@ -198,7 +200,7 @@ def process_emails():
         mail.select("inbox")
 
         print("🔍 Searching for relevant emails...")
-        search_criteria = '(OR (SUBJECT "factura") (SUBJECT "FACTURA") (SUBJECT "Factura"))'
+        search_criteria = f'(SUBJECT "{subject}")'
         status, message_numbers = mail.search(None, search_criteria)
 
         if status != 'OK':
@@ -255,9 +257,17 @@ def process_emails():
             pass
 
 
-
 if __name__ == "__main__":
+    # Argument parser setup
+    parser = argparse.ArgumentParser(description="Process emails with specific subject line.")
+    parser.add_argument("-s", "--subject", 
+                        required=True,
+                        type=str,
+                        help="Subject line to search for in emails")
+    
+    args = parser.parse_args()
+    
     try:
-        process_emails()
+        process_emails(args.subject)
     except Exception as e:
         print(f"❌ Error: {e}")
