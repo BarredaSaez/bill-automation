@@ -16,11 +16,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import pickle
 import argparse
-<<<<<<< HEAD
-=======
 from email.utils import parsedate_to_datetime
 import pytz
->>>>>>> 787eac57a05738c97b34b224e7895b7e6fd18fb2
 
 load_dotenv()
 
@@ -208,13 +205,9 @@ def process_file(file_path):
         print("Could not extract text from the file.")
 
 def process_emails(subject):
-<<<<<<< HEAD
-    subject = str(subject)
-=======
     data_dict = load_data_file()
     stored_date = data_dict.get(subject, None)
     
->>>>>>> 787eac57a05738c97b34b224e7895b7e6fd18fb2
     email_address = os.getenv("GMAIL_EMAIL")
     password = os.getenv("GMAIL_APP_PASSWORD")
 
@@ -311,13 +304,7 @@ def process_emails(subject):
         except:
             pass
 
-<<<<<<< HEAD
-
 if __name__ == "__main__":
-    # Argument parser setup
-=======
-if __name__ == "__main__":
->>>>>>> 787eac57a05738c97b34b224e7895b7e6fd18fb2
     parser = argparse.ArgumentParser(description="Process emails with specific subject line.")
     parser.add_argument("-s", "--subject", 
                         required=True,
