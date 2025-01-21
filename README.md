@@ -56,7 +56,3 @@ This project is licensed under the MIT License. See the `LICENSE` file for detai
 ## Contact
 
 For any inquiries or support, please reach out to the repository owner via GitHub.
-
----
-
-Feel free to modify this template as needed for your specific project details and usage instructions.
