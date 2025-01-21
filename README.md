@@ -1,5 +1,3 @@
-Sure, here is a generated README for your repository:
-
 # Bill Automation
 
 Python script to perform a bill scraping automation from Gmail using LLMs like ChatGPT-4o-mini, then the script will upload the data to a Google Sheets file. It can work with an easy interface where the user has to include the email-subject, and with a script interface to use it with crontabs or automated scripts. 
