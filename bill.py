@@ -16,10 +16,39 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import pickle
 import argparse
+<<<<<<< HEAD
+=======
+from email.utils import parsedate_to_datetime
+import pytz
+>>>>>>> 787eac57a05738c97b34b224e7895b7e6fd18fb2
 
 load_dotenv()
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# .data file functions
+def load_data_file():
+    """Load .data file into dictionary of {subject: datetime}"""
+    data = {}
+    if os.path.exists('.data'):
+        with open('.data', 'r') as f:
+            for line in f:
+                line = line.strip()
+                if len(line) >= 19:
+                    date_str = line[-19:]
+                    try:
+                        date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+                    except ValueError:
+                        continue
+                    subject = line[:-20].strip()
+                    data[subject] = date
+    return data
+
+def save_data_file(data):
+    """Save dictionary to .data file"""
+    with open('.data', 'w') as f:
+        for subject, date in data.items():
+            f.write(f"{subject} {date.strftime('%Y-%m-%d %H:%M:%S')}\n")
 
 def extract_text_from_pdf(pdf_path):
     images = convert_from_path(pdf_path)
@@ -36,7 +65,7 @@ def extract_text_from_image(image_path):
 
 def analyze_text_with_openai(texto):
     respuesta = openai.ChatCompletion.create(
-        model="gpt-4o-mini",
+        model="gpt-4",
         messages=[
             {"role": "system", "content": "Eres un asistente que analiza facturas y extrae datos en formato JSON."},
             {"role": "user", "content": f"""
@@ -75,20 +104,17 @@ def analyze_text_with_openai(texto):
     guardar_en_sheets(resultado_json)
     return resultado_json
 
-
 def get_sheets_service():
     """Get authenticated Google Sheets service"""
     SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
     creds = None
     
-    # Check for credentials file
     if not os.path.exists('client_secrets.json'):
         raise FileNotFoundError(
             "client_secrets.json not found. Please download OAuth 2.0 credentials "
             "from Google Cloud Console and save as client_secrets.json"
         )
     
-    # Try to load existing token
     if os.path.exists('token.pickle'):
         try:
             with open('token.pickle', 'rb') as token:
@@ -97,7 +123,6 @@ def get_sheets_service():
             os.remove('token.pickle')
             creds = None
     
-    # Get new credentials if needed        
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
@@ -106,7 +131,6 @@ def get_sheets_service():
                 'client_secrets.json', SCOPES)
             creds = flow.run_local_server(port=0)
         
-        # Save new token
         with open('token.pickle', 'wb') as token:
             pickle.dump(creds, token)
     
@@ -121,7 +145,6 @@ def guardar_en_sheets(json_data):
             
         service = get_sheets_service()
         
-        # Verify sheet exists and get valid sheet name
         try:
             sheet_metadata = service.spreadsheets().get(
                 spreadsheetId=SPREADSHEET_ID).execute()
@@ -131,7 +154,6 @@ def guardar_en_sheets(json_data):
             print(f"❌ Error getting sheet metadata: {e}")
             return False
             
-        # Parse JSON and prepare rows
         data = json.loads(json_data.replace('```json', '').replace('```', '').strip())
         rows = []
         for producto in data['productos']:
@@ -186,7 +208,13 @@ def process_file(file_path):
         print("Could not extract text from the file.")
 
 def process_emails(subject):
+<<<<<<< HEAD
     subject = str(subject)
+=======
+    data_dict = load_data_file()
+    stored_date = data_dict.get(subject, None)
+    
+>>>>>>> 787eac57a05738c97b34b224e7895b7e6fd18fb2
     email_address = os.getenv("GMAIL_EMAIL")
     password = os.getenv("GMAIL_APP_PASSWORD")
 
@@ -214,6 +242,9 @@ def process_emails(subject):
         messages = message_numbers[0].split()
         print(f"Found {len(messages)} relevant emails")
     
+        latest_date = stored_date
+        processed_count = 0
+
         for num in messages:
             try:
                 status, msg = mail.fetch(num, '(RFC822)')
@@ -224,8 +255,18 @@ def process_emails(subject):
                 email_body = msg[0][1]
                 message = email.message_from_bytes(email_body)
                 
-                print(f"\nProcessing email: {message['subject']}")
+                # Parse and convert email date to UTC
+                email_date = parsedate_to_datetime(message['Date'])
+                email_date_utc = email_date.astimezone(pytz.UTC).replace(tzinfo=None)
+                
+                # Skip already processed emails
+                if stored_date and email_date_utc <= stored_date:
+                    print(f"⏩ Skipping already processed email: {message['subject']}")
+                    continue
 
+                print(f"\n📨 Processing email: {message['subject']} ({email_date_utc})")
+
+                attachment_processed = False
                 for part in message.walk():
                     if part.get_content_maintype() == 'multipart':
                         continue
@@ -239,12 +280,26 @@ def process_emails(subject):
                             tmp.write(part.get_payload(decode=True))
                             try:
                                 process_file(tmp.name)
+                                attachment_processed = True
                             except Exception as e:
                                 print(f"Error processing file {filename}: {str(e)}")
                             finally:
-                                os.unlink(tmp.name)  # Clean up temp file
+                                os.unlink(tmp.name)
+
+                if attachment_processed:
+                    # Update latest processed date
+                    if latest_date is None or email_date_utc > latest_date:
+                        latest_date = email_date_utc
+                    processed_count += 1
+
             except Exception as e:
                 print(f"Error processing message {num}: {str(e)}")
+
+        # Update .data file if new emails processed
+        if processed_count > 0 and latest_date is not None:
+            data_dict[subject] = latest_date
+            save_data_file(data_dict)
+            print(f"📝 Updated .data file with new date {latest_date} for '{subject}'")
 
     except imaplib.IMAP4.error as e:
         print(f"IMAP error: {str(e)}")
@@ -256,9 +311,13 @@ def process_emails(subject):
         except:
             pass
 
+<<<<<<< HEAD
 
 if __name__ == "__main__":
     # Argument parser setup
+=======
+if __name__ == "__main__":
+>>>>>>> 787eac57a05738c97b34b224e7895b7e6fd18fb2
     parser = argparse.ArgumentParser(description="Process emails with specific subject line.")
     parser.add_argument("-s", "--subject", 
                         required=True,
